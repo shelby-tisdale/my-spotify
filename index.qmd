@@ -1,0 +1,58 @@
+---
+author: "Shelby Tisdale"
+format: html
+---
+
+```{r}
+#| label: load packages
+#| warning: false
+
+# import packages
+library(jsonlite)
+library(lubridate)
+library(gghighlight)
+library(spotifyr)
+library(tidyverse)
+library(plotly)
+library(gt)
+```
+
+```{r}
+#| label: load-data
+
+# Export my Spotify data to an R dataframe
+stream_history1 <- fromJSON("data/StreamingHistory0.json", flatten = TRUE)
+stream_history2 <- fromJSON("data/StreamingHistory1.json", flatten = TRUE)
+stream_history3 <- fromJSON("data/StreamingHistory2.json", flatten = TRUE)
+
+stream_data <- rbind(stream_history1, stream_history2, stream_history3)
+
+stream_data <- stream_data |> 
+  as_tibble() |>
+  mutate_at("endTime", ymd_hm) |> 
+  mutate(endTime = endTime - hours(6)) |>
+  mutate(date = floor_date(endTime, "day") |> as_date(), minutes = msPlayed / 60000) |>
+  rename(end_time = endTime, artist_name = artistName, track_name = trackName) |>
+  select(-msPlayed) |>
+  group_by(track_name, artist_name) |>
+  summarize(total_minutes = sum(minutes), .groups = "drop") |>
+  round()
+```
+
+```{r}
+#| label: my-top-10-artists
+
+top_artists <- stream_data |>
+  group_by(artist_name) |>
+  summarize(listening_minutes = sum(total_minutes), .groups = "drop") |>
+  arrange(desc(listening_minutes)) |>
+  slice(1:10) |>
+  mutate(listening_hours = listening_minutes/60)
+
+```
+# my top 10 artists
+```{r}
+#| top-10-artists viz
+#| create table: artist pic, name, most-listened song, hours_listened
+```
+
